@@ -7,6 +7,12 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+   try {
+    await authApiServer.me();
+  } catch {
+    redirect("/auth/login");
+  }
+  
   return (
     <>
       <main className="relative w-full h-screen flex overflow-hidden">
