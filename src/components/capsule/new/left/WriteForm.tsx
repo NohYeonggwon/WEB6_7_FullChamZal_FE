@@ -79,9 +79,17 @@ export default function WriteForm({
   const [sendMethod, setSendMethod] = useState("URL");
   const [unlockType, setUnlockType] = useState("TIME");
   const [dayForm, setDayForm] = useState<DayForm>({ date: "", time: "" });
+  const [isExpire, setIsExpire] = useState(false); //열람 만료 시간의 유무
+  //열람 만료 시간 데이터
+  const [expireDayForm, setExpireDayForm] = useState<DayForm>({
+    date: "",
+    time: "",
+  });
   const [locationForm, setLocationForm] = useState<LocationForm>({
     query: "",
     placeName: "",
+    locationLabel: "",
+    viewingRadius: 50,
     address: "",
     lat: undefined,
     lng: undefined,
@@ -272,12 +280,21 @@ export default function WriteForm({
       window.alert("해제 날짜와 시간을 모두 입력해 주세요.");
       return;
     }
+
+    if (isExpire && (!expireDayForm.date || !expireDayForm.time)) {
+      window.alert("만료 날짜와 시간을 모두 입력해 주세요.");
+      return;
+    }
     if (
       (effectiveUnlockType === "LOCATION" ||
         effectiveUnlockType === "TIME_AND_LOCATION") &&
-      (!locationForm.placeName || !locationForm.lat || !locationForm.lng)
+      (!locationForm.placeName ||
+        !locationForm.lat ||
+        !locationForm.lng ||
+        !locationForm.locationLabel?.trim() ||
+        !locationForm.viewingRadius)
     ) {
-      window.alert("장소를 선택해 주세요.");
+      window.alert("장소를 선택하고, 장소 이름과 조회반경을 입력해 주세요.");
       return;
     }
 
@@ -295,6 +312,7 @@ export default function WriteForm({
       visibility: effectiveVisibility,
       effectiveUnlockType,
       dayForm,
+      expireDayForm,
       locationForm,
       packingColor: envelopeSelected?.name ?? "",
       contentColor: paperSelected?.name ?? "",
@@ -310,6 +328,7 @@ export default function WriteForm({
       visibility: effectiveVisibility,
       effectiveUnlockType,
       dayForm,
+      expireDayForm,
       locationForm,
       capsulePassword,
       capsuleColor: paperSelected?.name ?? "",
@@ -598,15 +617,28 @@ export default function WriteForm({
             />
             <div className="w-full p-4 border border-outline bg-[#F9F9FA] rounded-xl space-y-3">
               {unlockType === "TIME" && (
-                <DayTime value={dayForm} onChange={setDayForm} />
+                <DayTime
+                  visibility={visibility}
+                  isExpire={isExpire}
+                  onIsExpireChange={() => setIsExpire((state) => !state)}
+                  dayValue={dayForm}
+                  onDayChange={setDayForm}
+                  expireDayValue={expireDayForm}
+                  onExpireDayChange={setExpireDayForm}
+                />
               )}
               {unlockType === "LOCATION" && (
                 <Location value={locationForm} onChange={setLocationForm} />
               )}
               {unlockType === "MANUAL" && (
                 <DayLocation
+                  visibility={visibility}
+                  isExpire={isExpire}
+                  onIsExpireChange={() => setIsExpire((state) => !state)}
                   dayValue={dayForm}
                   onDayChange={setDayForm}
+                  expireDayValue={expireDayForm}
+                  onExpireDayChange={setExpireDayForm}
                   locationValue={locationForm}
                   onLocationChange={setLocationForm}
                 />

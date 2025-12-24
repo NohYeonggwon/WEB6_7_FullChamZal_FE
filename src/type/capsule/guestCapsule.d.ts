@@ -17,6 +17,8 @@ type CapsuleReadRequest = {
   password?: string | null;
 };
 
+type UnlockType = "TIME" | "LOCATION" | "TIME_AND_LOCATION";
+
 type CapsuleReadData = {
   capsuleId: number;
   capsuleColor: string;
@@ -27,12 +29,13 @@ type CapsuleReadData = {
   content: string;
   createAt: string;
   viewStatus: boolean;
-  unlockType: "TIME" | "LOCATION" | "TIME_AND_LOCATION";
+  unlockType: UnlockType;
   unlockAt: string;
   unlockUntil: string;
   locationName?: string;
   locationLat?: number;
   locationLng?: number;
+  locationRadiusM?: number;
   result: string;
 };
 
