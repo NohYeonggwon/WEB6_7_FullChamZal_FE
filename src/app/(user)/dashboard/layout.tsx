@@ -8,12 +8,15 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-   try {
-    await authApiServer.me();
+  let me: MemberMe;
+  try {
+    me = await authApiServer.me();
   } catch {
     redirect("/auth/login");
   }
-  
+
+  if (me.role !== "USER") redirect("/auth/login");
+
   return (
     <DashboardShell me={me}>
       <main className="relative w-full h-screen flex overflow-hidden">
