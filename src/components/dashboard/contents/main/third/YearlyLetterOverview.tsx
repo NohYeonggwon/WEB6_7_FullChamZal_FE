@@ -15,81 +15,32 @@ import {
 import { capsuleDashboardApi } from "@/lib/api/capsule/dashboardCapsule";
 import { useQuery } from "@tanstack/react-query";
 
-const data = [
-  {
-    name: "1월",
-    receive: 3,
-    send: 5,
-  },
-  {
-    name: "2월",
-    receive: 5,
-    send: 2,
-  },
-  {
-    name: "3월",
-    receive: 2,
-    send: 3,
-  },
-  {
-    name: "4월",
-    receive: 7,
-    send: 5,
-  },
-  {
-    name: "5월",
-    receive: 8,
-    send: 6,
-  },
-  {
-    name: "6월",
-    receive: 6,
-    send: 7,
-  },
-  {
-    name: "7월",
-    receive: 4,
-    send: 4,
-  },
-  {
-    name: "8월",
-    receive: 3,
-    send: 0,
-  },
-  {
-    name: "9월",
-    receive: 0,
-    send: 1,
-  },
-  {
-    name: "10월",
-    receive: 2,
-    send: 3,
-  },
-  {
-    name: "11월",
-    receive: 1,
-    send: 4,
-  },
-  {
-    name: "12월",
-    receive: 4,
-    send: 2,
-  },
-];
-
 export default function YearlyLetterOverview() {
   /** 보낸 편지 */
-  const { data: sendList } = useQuery({
-    queryKey: ["capsuleDashboard", "send"],
-    queryFn: ({ signal }) => capsuleDashboardApi.sendDashboard(signal),
+  const { data: sendData } = useQuery({
+    queryKey: ["capsuleDashboard", "send", "count"],
+    queryFn: ({ signal }) =>
+      capsuleDashboardApi.sendDashboard({ page: 0, size: 1 }, signal),
   });
 
   /** 받은 편지 */
-  const { data: receiveList } = useQuery({
-    queryKey: ["capsuleDashboard", "receive"],
-    queryFn: ({ signal }) => capsuleDashboardApi.receiveDashboard(signal),
+  const { data: receiveData } = useQuery({
+    queryKey: ["capsuleDashboard", "receive", "count"],
+    queryFn: ({ signal }) =>
+      capsuleDashboardApi.receiveDashboard({ page: 0, size: 1 }, signal),
   });
+
+  const year = new Date().getFullYear();
+
+  const { data: yearLetters } = useQuery({
+    queryKey: ["yearLetters", year],
+    queryFn: ({ signal }) => capsuleDashboardApi.yearLetters(year, signal),
+  });
+
+  const yearData = yearLetters?.data.data ?? [];
+
+  const sendCount = sendData?.data.totalElements ?? 0;
+  const receiveCount = receiveData?.data.totalElements ?? 0;
 
   return (
     <>
@@ -107,17 +58,17 @@ export default function YearlyLetterOverview() {
         <div className="flex gap-4">
           <div className="w-full px-4 py-3 bg-sub rounded-[10px] space-y-2">
             <p className="text-sm">보낸 편지</p>
-            <p className="text-12 text-2xl">{sendList?.length ?? 0}</p>
+            <p className="text-12 text-2xl">{sendCount}</p>
           </div>
           <div className="w-full px-4 py-3 bg-primary-5 rounded-[10px] space-y-2">
             <p className="text-sm">받은 편지</p>
-            <p className="text-2xl">{receiveList?.length ?? 0}</p>
+            <p className="text-2xl">{receiveCount}</p>
           </div>
         </div>
         <div className="h-80 select-none outline-none [&_*:focus]:outline-none">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
-              data={data}
+              data={yearData}
               margin={{ top: 20, right: 20, bottom: 20, left: 0 }}
             >
               {/* 그라데이션 정의 */}

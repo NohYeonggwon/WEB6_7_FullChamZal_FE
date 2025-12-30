@@ -1,19 +1,69 @@
 import { apiFetch, apiFetchRaw } from "../fetchClient";
 
 export const capsuleDashboardApi = {
+  /* 오늘 해제될 편지 조회 */
+  dailyUnlocked: (signal?: AbortSignal) => {
+    return apiFetchRaw<DailyUnlockedCapsuleResponse>(
+      "/api/v1/capsule/dailyUnlockedCapsule",
+      { signal }
+    );
+  },
+
+  /* 올 해 송수신 한 캡슐들의 수 */
+  yearLetters: (year: number, signal?: AbortSignal) => {
+    const sp = new URLSearchParams();
+    sp.set("year", String(year));
+
+    return apiFetchRaw<YearlyCapsuleResponse>(
+      `/api/v1/capsule/showYearlyCapsule?${sp.toString()}`,
+      { signal }
+    );
+  },
+
   /* 보낸 편지 */
-  sendDashboard: (signal?: AbortSignal) =>
-    apiFetch<CapsuleDashboardItem[]>("/api/v1/capsule/send/dashboard", {
-      signal,
-    }),
+  sendDashboard: (
+    params?: { page?: number; size?: number; sort?: string[] },
+    signal?: AbortSignal
+  ) => {
+    const page = params?.page ?? 0;
+    const size = params?.size ?? 10;
+
+    const sp = new URLSearchParams();
+    sp.set("page", String(page));
+    sp.set("size", String(size));
+    params?.sort?.forEach((s) => sp.append("sort", s));
+
+    return apiFetchRaw<PageResponse<CapsuleDashboardItem>>(
+      `/api/v1/capsule/send/dashboard?${sp.toString()}`,
+      { signal }
+    );
+  },
 
   /* 보낸 편지 읽기 */
+  readSendCapsule: (capsuleId: number, signal?: AbortSignal) =>
+    apiFetch<CapsuleDashboardSendItem>(
+      `/api/v1/capsule/readSendCapsule?capsuleId=${capsuleId}`,
+      { signal }
+    ),
 
   /* 받은 편지 */
-  receiveDashboard: (signal?: AbortSignal) =>
-    apiFetch<CapsuleDashboardItem[]>("/api/v1/capsule/receive/dashboard", {
-      signal,
-    }),
+  receiveDashboard: (
+    params?: { page?: number; size?: number; sort?: string[] },
+    signal?: AbortSignal
+  ) => {
+    const page = params?.page ?? 0;
+    const size = params?.size ?? 10;
+
+    const sp = new URLSearchParams();
+    sp.set("page", String(page));
+    sp.set("size", String(size));
+    params?.sort?.forEach((s) => sp.append("sort", s));
+
+    return apiFetchRaw<PageResponse<CapsuleDashboardItem>>(
+      `/api/v1/capsule/receive/dashboard?${sp.toString()}`,
+      { signal }
+    );
+  },
 
   /* 북마크 편지 */
   bookmarks: (
@@ -40,6 +90,7 @@ export const capsuleDashboardApi = {
   addBookmark: (capsuleId: number, signal?: AbortSignal) =>
     apiFetch("/api/bookmarks", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ capsuleId }),
       signal,
     }),

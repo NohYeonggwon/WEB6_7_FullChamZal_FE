@@ -6,16 +6,18 @@ export default function Modal({
   open,
   onClose,
   children,
+  zIndexClassName = "z-9999",
 }: {
   open: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  zIndexClassName?: string;
 }) {
   return (
     <AnimatePresence>
       {open ? (
         <motion.div
-          className="fixed inset-0 z-9999 bg-black/40"
+          className={`fixed w-full h-full inset-0 ${zIndexClassName} bg-black/40`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -27,7 +29,7 @@ export default function Modal({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            onMouseDown={(e) => e.stopPropagation()} // ✅ 모달 내부 클릭은 닫히지 않게
+            onMouseDown={(e) => e.stopPropagation()}
           >
             {children}
           </motion.div>

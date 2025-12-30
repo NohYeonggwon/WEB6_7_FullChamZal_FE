@@ -1,16 +1,9 @@
 import { apiFetchRaw } from "../fetchClient";
-import {
-  CapsuleCreateResponse,
-  CreatePrivateCapsuleRequest,
-  CreateMyCapsuleRequest,
-  CreatePublicCapsuleRequest,
-  CapsuleUpdateRequest,
-  CapsuleUpdateResponse,
-  CapsuleDeleteResponse,
-  CapsuleLikeResponse,
-  CapsuleSendReadResponse,
-  UnlockType,
-} from "./types";
+
+function toIsoIfFilled(dayForm?: DayForm): string | undefined {
+  if (!dayForm?.date || !dayForm?.time) return undefined;
+  return new Date(`${dayForm.date}T${dayForm.time}:00`).toISOString();
+}
 
 type BuildCommonArgs = {
   memberId: number;
@@ -118,18 +111,21 @@ export function buildPrivatePayload(
     packingColor = "",
     contentColor = "",
   } = args;
+
   const unlockAt =
     effectiveUnlockType === "TIME" ||
     effectiveUnlockType === "TIME_AND_LOCATION"
       ? new Date(`${dayForm.date}T${dayForm.time}:00`).toISOString()
       : undefined;
 
+  const expireIso = toIsoIfFilled(expireDayForm);
+
   const unlockUntil =
-    expireDayForm &&
     (effectiveUnlockType === "TIME" ||
-      effectiveUnlockType === "TIME_AND_LOCATION")
-      ? new Date(`${expireDayForm.date}T${expireDayForm.time}:00`).toISOString()
-      : undefined;
+      effectiveUnlockType === "TIME_AND_LOCATION") &&
+    expireIso
+      ? expireIso
+      : null;
 
   return {
     memberId,
@@ -204,12 +200,14 @@ export function buildPublicPayload(
       ? new Date(`${dayForm.date}T${dayForm.time}:00`).toISOString()
       : undefined;
 
+  const expireIso = toIsoIfFilled(expireDayForm);
+
   const unlockUntil =
-    expireDayForm &&
     (effectiveUnlockType === "TIME" ||
-      effectiveUnlockType === "TIME_AND_LOCATION")
-      ? new Date(`${expireDayForm.date}T${expireDayForm.time}:00`).toISOString()
-      : undefined;
+      effectiveUnlockType === "TIME_AND_LOCATION") &&
+    expireIso
+      ? expireIso
+      : null;
 
   return {
     memberId,
@@ -245,7 +243,13 @@ export function buildPublicPayload(
       effectiveUnlockType === "TIME_AND_LOCATION"
         ? locationForm.lng ?? 0
         : 0,
+    locationRadiusM:
+      effectiveUnlockType === "LOCATION" ||
+      effectiveUnlockType === "TIME_AND_LOCATION"
+        ? locationForm.viewingRadius
+        : 0,
     maxViewCount: 0,
+    attachmentIds: [], // 첨부 파일은 추후 구현
   };
 }
 
