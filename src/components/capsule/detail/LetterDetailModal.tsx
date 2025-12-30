@@ -37,6 +37,7 @@ import { adminCapsulesApi } from "@/lib/api/admin/capsules/adminCapsules";
 import { authApiClient } from "@/lib/api/auth/auth.client";
 import { guestCapsuleApi } from "@/lib/api/capsule/guestCapsule";
 import {
+  backupCapsule,
   deleteCapsuleAsReceiver,
   deleteCapsuleAsSender,
   getCapsuleLikeCount,
@@ -49,7 +50,9 @@ import { capsuleDashboardApi } from "@/lib/api/capsule/dashboardCapsule";
 import { CAPTURE_COLOR_MAP } from "@/constants/capsulePalette";
 import ReportModal from "../report/ReportModal";
 
-type UICapsule = {
+type UnlockType = "TIME" | "LOCATION" | "TIME_AND_LOCATION";
+
+export type UICapsule = {
   capsuleColor?: string;
   title: string;
   content: string;
@@ -109,6 +112,7 @@ export default function LetterDetailModal({
   locationLat = null,
   locationLng = null,
   password = null,
+  initialData = null,
 }: {
   uuId?: string;
   capsuleId: number;
@@ -121,6 +125,7 @@ export default function LetterDetailModal({
   locationLat?: number | null;
   locationLng?: number | null;
   password?: string | null;
+  initialData?: UICapsule | null; // LetterDetailView에서 이미 가져온 데이터
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -144,6 +149,9 @@ export default function LetterDetailModal({
   /* 삭제 */
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDeleteSuccessOpen, setIsDeleteSuccessOpen] = useState(false);
+
+  // 백업
+  const [isBackupSuccessOpen, setIsBackupSuccessOpen] = useState(false);
 
   // 좋아요
   const [isLiked, setIsLiked] = useState(false);
@@ -239,6 +247,29 @@ export default function LetterDetailModal({
           : typeof err === "string"
           ? err
           : "삭제 중 오류가 발생했습니다.";
+      alert(msg);
+    },
+  });
+
+  //백업 mutation
+  const backupMutation = useMutation({
+    mutationKey: ["capsuleBackup", capsuleId],
+    mutationFn: backupCapsule,
+    onSuccess: (res) => {
+      const url = res.data.authUrl;
+      if (res.data.status === "NEED_CONNECT") {
+        window.open(url, "_blank");
+        return;
+      }
+      setIsBackupSuccessOpen(true);
+    },
+    onError: (err) => {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === "string"
+          ? err
+          : "백업 중 오류가 발생했습니다.";
       alert(msg);
     },
   });
@@ -399,9 +430,10 @@ export default function LetterDetailModal({
   };
 
   // 상세 조회 query (open일 때만)
+  // initialData가 있으면 API 호출하지 않음 (중복 요청 방지)
   const { data, isLoading, isError, error } = useQuery<UICapsule>({
     queryKey: ["capsuleDetailModal", role, capsuleId, password, isSender],
-    enabled: open && capsuleId > 0,
+    enabled: open && capsuleId > 0 && !initialData,
     retry: false,
     queryFn: async ({ signal }) => {
       // 1) 관리자 상세
@@ -496,13 +528,16 @@ export default function LetterDetailModal({
 
   useEffect(() => {
     if (!open) return;
-    setIsBookmarked(!!data?.isBookmarked);
-  }, [open, data?.isBookmarked]);
+    setIsBookmarked(!!(initialData?.isBookmarked ?? data?.isBookmarked));
+  }, [open, initialData?.isBookmarked, data?.isBookmarked]);
 
   // open이 아니면 렌더 자체 안 함
   if (!open) return null;
 
-  if (isLoading) {
+  // initialData가 있으면 바로 사용, 없으면 useQuery 결과 사용
+  const capsuleData = initialData ?? data;
+
+  if (!initialData && isLoading) {
     return (
       <div className="fixed inset-0 z-9999 bg-black/50">
         <div className="flex h-full justify-center p-15">
@@ -540,7 +575,7 @@ export default function LetterDetailModal({
     );
   }
 
-  if (!data) {
+  if (!capsuleData) {
     return (
       <div className="fixed inset-0 z-9999 bg-black/50">
         <div className="flex h-full justify-center p-15">
@@ -560,7 +595,7 @@ export default function LetterDetailModal({
     );
   }
 
-  const capsule = data;
+  const capsule = capsuleData;
 
   const isTime =
     capsule.unlockType === "TIME" || capsule.unlockType === "TIME_AND_LOCATION";
@@ -608,6 +643,15 @@ export default function LetterDetailModal({
             router.refresh();
           }}
         />
+      )}
+
+      {backupMutation.isPending && (
+        <div className="fixed inset-0 z-1000 bg-black/40 flex items-center justify-center">
+          <div className="bg-white rounded-xl px-6 py-4 flex items-center gap-3">
+            <span className="animate-spin rounded-full h-5 w-5 border-2 border-primary-2 border-t-transparent" />
+            <span className="text-sm font-medium">백업 중...</span>
+          </div>
+        </div>
       )}
 
       {/* 북마크 성공 모달 */}
@@ -661,6 +705,23 @@ export default function LetterDetailModal({
         />
       )}
 
+      {/* 백업 성공 모달 */}
+      {isBackupSuccessOpen && (
+        <ActiveModal
+          active="success"
+          title="백업 완료"
+          content="구글 드라이브에 캡슐 내용이 저장되었습니다."
+          open={isBackupSuccessOpen}
+          onClose={() => setIsBackupSuccessOpen(false)}
+          onConfirm={() => {
+            setIsBackupSuccessOpen(false);
+            if (closeHref) router.push(closeHref);
+            else router.back();
+            router.refresh();
+          }}
+        />
+      )}
+      
       {/* 신고 모달 */}
       {isReportOpen && (
         <ReportModal
@@ -710,6 +771,16 @@ export default function LetterDetailModal({
                       <DropdownMenuLabel>관리</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
+                        {isReceiver && (
+                          <DropdownMenuItem
+                            onClick={() => backupMutation.mutate(capsuleId)}
+                          >
+                            <PencilLine className="text-primary" />
+                            {backupMutation.isPending
+                              ? "백업 중..."
+                              : "백업하기"}
+                          </DropdownMenuItem>
+                        )}
                         {isSender && (
                           <DropdownMenuItem
                             onClick={() => {
