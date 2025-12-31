@@ -49,6 +49,7 @@ import { formatDateTime } from "@/lib/hooks/formatDateTime";
 import { capsuleDashboardApi } from "@/lib/api/capsule/dashboardCapsule";
 import { CAPTURE_COLOR_MAP } from "@/constants/capsulePalette";
 import ReportModal from "../report/ReportModal";
+import toast from "react-hot-toast";
 
 type UnlockType = "TIME" | "LOCATION" | "TIME_AND_LOCATION";
 
@@ -156,6 +157,10 @@ export default function LetterDetailModal({
   // 좋아요
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [likeToast, setLikeToast] = useState<{
+    open: boolean;
+    mode: "ADD" | "REMOVE";
+  }>({ open: false, mode: "ADD" });
 
   // 북마크
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -212,7 +217,7 @@ export default function LetterDetailModal({
           : typeof err === "string"
           ? err
           : "북마크 처리 중 오류가 발생했습니다.";
-      alert(msg);
+      toast.error(msg);
     },
     onSuccess: (_data, nextBookmarked) => {
       // 목록/상세 캐시 갱신
@@ -238,6 +243,9 @@ export default function LetterDetailModal({
       throw new Error("삭제할 수 없습니다.");
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["capsuleDetailModal"] });
+      queryClient.invalidateQueries({ queryKey: ["capsuleDashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
       setIsDeleteSuccessOpen(true);
     },
     onError: (err: unknown) => {
@@ -247,7 +255,7 @@ export default function LetterDetailModal({
           : typeof err === "string"
           ? err
           : "삭제 중 오류가 발생했습니다.";
-      alert(msg);
+      toast.error(msg);
     },
   });
 
@@ -270,7 +278,7 @@ export default function LetterDetailModal({
           : typeof err === "string"
           ? err
           : "백업 중 오류가 발생했습니다.";
-      alert(msg);
+      toast.error(msg);
     },
   });
 
@@ -284,10 +292,14 @@ export default function LetterDetailModal({
     },
   });
 
-  // 좋아요 수 초기화
+  // 좋아요 수 및 상태 초기화
   useEffect(() => {
     if (likeData) {
-      setLikeCount(likeData.likeCount);
+      setLikeCount(likeData.capsuleLikeCount);
+      // isLiked가 있으면 초기 상태 설정 (readLike API 응답에 포함됨)
+      if (typeof likeData.isLiked === "boolean") {
+        setIsLiked(likeData.isLiked);
+      }
     }
   }, [likeData]);
 
@@ -309,8 +321,15 @@ export default function LetterDetailModal({
       return { previousIsLiked, previousLikeCount, nextIsLiked };
     },
     onSuccess: (data, _variables, context) => {
-      if (data.data) setLikeCount(data.data.likeCount);
-      if (context) setIsLiked(context.nextIsLiked);
+      if (data.data) setLikeCount(data.data.capsuleLikeCount);
+      if (context) {
+        setIsLiked(context.nextIsLiked);
+        // 좋아요 성공 모달 표시
+        setLikeToast({
+          open: true,
+          mode: context.nextIsLiked ? "ADD" : "REMOVE",
+        });
+      }
     },
     onError: (err, _variables, context) => {
       const errorCode =
@@ -337,7 +356,7 @@ export default function LetterDetailModal({
           : typeof err === "string"
           ? err
           : "좋아요 처리 중 오류가 발생했습니다.";
-      alert(msg);
+      toast.error(msg);
     },
   });
 
@@ -425,7 +444,7 @@ export default function LetterDetailModal({
           : typeof err === "string"
           ? err
           : "북마크 처리 중 오류가 발생했습니다.";
-      alert(msg);
+      toast.error(msg);
     }
   };
 
@@ -669,6 +688,21 @@ export default function LetterDetailModal({
         />
       )}
 
+      {/* 좋아요 성공 모달 */}
+      {likeToast.open && (
+        <ActiveModal
+          active="success"
+          title={likeToast.mode === "ADD" ? "좋아요 완료" : "좋아요 취소"}
+          content={
+            likeToast.mode === "ADD"
+              ? "좋아요가 완료되었습니다."
+              : "좋아요가 취소되었습니다."
+          }
+          open={likeToast.open}
+          onClose={() => setLikeToast((prev) => ({ ...prev, open: false }))}
+        />
+      )}
+
       {/* 삭제 확인 모달 */}
       {isDeleteConfirmOpen && (
         <ConfirmModal
@@ -698,9 +732,9 @@ export default function LetterDetailModal({
           onClose={() => setIsDeleteSuccessOpen(false)}
           onConfirm={() => {
             setIsDeleteSuccessOpen(false);
+
             if (closeHref) router.push(closeHref);
             else router.back();
-            router.refresh();
           }}
         />
       )}
@@ -721,7 +755,7 @@ export default function LetterDetailModal({
           }}
         />
       )}
-      
+
       {/* 신고 모달 */}
       {isReportOpen && (
         <ReportModal
