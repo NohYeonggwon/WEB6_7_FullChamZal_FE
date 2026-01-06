@@ -13,7 +13,8 @@ type FirstFormValue = {
   title: string;
   description: string;
   order: TrackType;
-  imageFile: File | null;
+  thumbnailAttachmentId: number | undefined; // 썸네일 attachmentId (필수, 초기값은 undefined)
+  thumbnailStatus?: "UPLOADING" | "PENDING" | "TEMP" | "DELETED" | "USED"; // 썸네일 상태
 };
 
 type MemberType = "CREATOR" | "NOT_JOINED" | "PARTICIPANT" | "COMPLETED";
@@ -31,6 +32,7 @@ type StoryTrackItem = {
   createdAt: string;
   totalMemberCount: number;
   memberType: MemberType;
+  imageUrl?: string | null; // 썸네일 이미지 URL
 };
 
 type StoryTrackListPage = {
@@ -52,6 +54,7 @@ type CreateStorytrackRequest = {
   isPublic: number; // 0: 비공개, 1: 공개
   price: number;
   capsuleList: number[]; // capsuleId 배열
+  attachmentId: number; // 썸네일 attachmentId (필수)
 };
 
 /* 스토리트랙 생성 응답 */
@@ -112,6 +115,7 @@ type StoryTrackJoinedItem = {
   completedAt: string | null;
   createdAt: string;
   totalMemberCount: number;
+  imageUrl?: string | null; // 썸네일 이미지 URL
 };
 
 type StoryTrackJoinedListPage = {
@@ -136,6 +140,7 @@ type StoryTrackMineItem = {
   totalSteps: number;
   createdAt: string;
   totalMemberCount: number;
+  imageUrl?: string | null; // 썸네일 이미지 URL
 };
 
 type StoryTrackMineListPage = {
@@ -164,6 +169,7 @@ type StoryTrackDetailItem = {
   memberType: MemberType;
   paths: StoryTrackPaths;
   completedCapsuleId: number[];
+  imageUrl?: string | null; // 썸네일 이미지 URL
 };
 
 type StoryTrackPaths = {
@@ -205,6 +211,7 @@ type StoryTrackProgressItem = {
   lastCompletedStep: number;
   completedAt: string;
   createdAt: string;
+  imageUrl?: string | null; // 썸네일 이미지 URL
 };
 
 type StoryTrackProgressResponse = ApiEnvelope<StoryTrackProgressItem>;
