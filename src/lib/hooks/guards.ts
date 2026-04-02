@@ -22,7 +22,8 @@ export async function requireCapsuleUser() {
 
   // 프로필 필수 정보 체크
   if (!me.nickname || !me.phoneNumber) {
-    redirect("/dashboard");
+    //redirect("/dashboard");
+    redirect("/auth/profile");
   }
 
   return me;
